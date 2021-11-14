@@ -1,0 +1,68 @@
+- name: "Задача по изменению квоты в OKD"
+
+  ## search блок в котором отбирается список задач по JQL-запросу
+  search:
+    JQL: >-
+      assignee = jira-orchestrator
+      AND project = MSDEVOPS
+      AND issuetype = 14206
+      AND status = 10083
+      AND (labels is empty or labels != processed)
+
+  ## map_variable_issue_field описание карты с переменными которые заполняются полями из задачи
+  ## в дальнейшем они будут передаваться блоку actions
+  map_variables_issue_fields:
+    ns: fields.customfield_20835
+    cpu: fields.customfield_20836
+    ram: fields.customfield_20837
+    environment: fields.customfield_11334.value
+    business: fields.customfield_17432.value
+
+  ## actions список действий которые поочередно выполняются
+  ## при неудачном выполнении одного из действий - обработка задачи считается невыполненной 
+  actions:
+    1:
+      type: script
+
+      ## этот блок дополняет набор переменных полученных из блока map_variables_issue_fields
+      ## и использует их только в этом действии
+      variables: 
+        resource_manager_api_url_test: "https://resource-manager.test-example"
+        resource_manager_api_url_prod: "https://resource-manager.example"
+
+      # описание действия, используется для информации и при логировании
+      desc: update quota in okd
+
+      data:
+        ## module_name имя модуля с функциями
+        module_name: okd
+
+        ## func_name имя функции которая будет вызвана с аргументами 
+        func_name: update_quota
+        
+      ## map_variables_json_fields этот блок дополняет набор переменных полученных из блока map_variables_issue_fields
+      ## передает следующему действию
+      ## поля он берет из ответа скрипта в формате json
+      map_variables_json_fields: {}
+
+  ## transition_id_success id статуса в который будет переведена задача при удачном выполнении всех этапов
+  transition_id_success: "11"
+  # transition_id_success: "11" # Done
+  
+  ## transition_id_problem id статуса в который будет переведена задача при проблемах
+  transition_id_problem: ""
+  
+  ## comment_success комментарий который добавится к задаче при удачном выполнении
+  comment_success: "задача обработана автоматически"
+
+  ## comment_problem комментарий который добавится к задаче при неудачном выполнении
+  comment_problem: "автоматически не удалось выполнить задачу"
+
+  ## assignee_problem на кого назначить задачу при неудачном выполнении
+  assignee_problem: "VoloshchenkoIN"
+  
+  ## labels_success добавление меток в задачу при удачном её выполнении
+  labels_success: ["processed"]
+
+  ## labels_problem добавление меток в задачу при проблемах в исполнении
+  labels_problem: ["processed"]

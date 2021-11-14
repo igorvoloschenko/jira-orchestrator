@@ -1,0 +1,11 @@
+version: '3.4'
+
+services:
+  jiraorchestrator:
+    image: jiraorchestrator
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    command: ["sh", "-c", "pip3 install debugpy -t /tmp && python3 /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 main.py "]
+    ports:
+      - 5678:5678

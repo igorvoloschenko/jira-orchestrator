@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+{{- if hasKey .Values.configMap "name" }}
+  name: {{ .Values.configMap.name }}
+{{ else }}
+  name: {{ include "..fullname" . }}
+{{ end }}
+  labels:
+    {{- include "..labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    logging:
+      {{- toYaml .Values.configMap.config.logging | nindent 6 }}
+
+    secret:
+      {{- toYaml .Values.configMap.config.secret | nindent 6 }}
+
+    jira:
+      {{- toYaml .Values.configMap.config.jira | nindent 6 }}
+
+    tasks:
+{{- range $path, $_ := .Files.Glob "tasks/*.yaml" }}
+    {{- $.Files.Get $path | nindent 4}}
+{{ end }}

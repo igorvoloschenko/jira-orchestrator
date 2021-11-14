@@ -1,0 +1,35 @@
+## logging блок для настройки логирования
+logging:
+  level: INFO
+  format: "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+
+## secret подключение secret-провайдера для получение секретов
+## которые можно использовать в конфигурации, пример: {{ secret.<имя_секрета> }} 
+secret: 
+  ## указание типа провайдера
+  provider: vault
+  
+  ## данные для работы с сервисом Vault
+  vault:
+    client:
+      url: "http://vault.default.svc.cluster.local:8200/"
+    auth:
+      type: "token" # или type: "kubernetes"
+      token: "12345"
+      kubernetes:
+        role: "jira_orchestrator"
+    secret_path:
+      path: "devops"
+      mount_point: "jira_orchestrator"
+
+## блок для подключения к jira
+jira:
+  url: "https://jira.example/"
+  auth:
+    type: Bearer
+    secret: "{{ secret.jira_token }}"
+  # proxy:
+
+## tasks блок
+## здесь список задач которые будут обрабатываться
+tasks: !include tasks/*.yaml

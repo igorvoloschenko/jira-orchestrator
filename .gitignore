@@ -1,0 +1,7 @@
+*.pyc
+__pycache__
+venv
+tmp
+temp
+.vscode
+config.yaml

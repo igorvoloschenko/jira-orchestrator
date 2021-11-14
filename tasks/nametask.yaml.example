@@ -1,0 +1,102 @@
+- name: "Задача по созданию проекта в OKD"
+
+  ## search блок в котором отбирается список задач по JQL-запросу
+  search:
+    JQL: >-
+      assignee = VoloshchenkoIN
+      AND project = MSDEVOPS
+      AND issuetype = 14205
+      AND status = 10083
+      AND (labels is empty or labels != processed)
+
+  ## map_variable_issue_field описание карты с переменными которые заполняются полями из задачи
+  ## в дальнейшем они будут передаваться блоку actions
+  map_variables_issue_fields:
+    ns: fields.customfield_20835
+    cpu: fields.customfield_20836
+    ram: fields.customfield_20837
+    environment: fields.customfield_11334.value
+    teamname: fields.customfield_20838
+    teamemail: fields.customfield_17535
+    projectname: fields.customfield_18138
+    business: fields.customfield_17432.value
+
+  ## actions список действий которые поочередно выполняются
+  ## при неудачном выполнении одного из действий - обработка задачи считается невыполненной 
+  actions:
+    1:
+      type: request
+
+      # описание действия, используется для информации и при логировании
+      desc: get JWT-token from GitLab
+
+      ## этот блок дополняет набор переменных полученных из блока map_variables_issue_fields
+      ## и использует только в этом действии
+      variables: {}
+
+      data:
+        method: "POST"
+        url: "https://gitlab.example/oauth/token"
+        headers:
+          Content-Type: "application/x-www-form-urlencoded"
+        body:
+          client_id: "{{ secret.gitlab_client_id }}"
+          client_secret: "{{ secret.gitlab_client_secret }}"
+          username: "{{ secret.gitlab_username }}"
+          password: "{{ secret.gitlab_password }}"
+          scope: "openid"
+          grant_type: "password"
+        session:
+          timeout: 5
+        
+        ## для определения удачного выполнения указывается код
+        code_success: 200
+
+        
+        ## map_variable_json_field этот блок дополняет набор переменных полученных из блока map_variable_issue_field
+        ## передает следующему действию
+        ## поля он берет из ответа скрипта в формате json
+      map_variables_json_fields:
+        jwt_token: id_token
+
+    2:
+      type: script
+      desc: create project in cluster
+      variables: 
+        ci_prepare_svc_api_url_test: "https://ci-prepare-svc.example"
+        ci_prepare_svc_api_url_prod: "https://gitlab-deploy.example"
+      data:
+        module_name: okd
+        func_name: create_project
+
+    3:
+      type: script
+      desc: create quota
+      variables: 
+        resource_manager_api_url_test: "https://resource-manager.example"
+        resource_manager_api_url_prod: ""
+      data:
+        module_name: okd
+        func_name: create_quota
+
+  ## transition_id_success id статуса задачи в который будет переведена задача при удачном выполнении всех этапов
+  transition_id_success: "11"
+  # transition_id_success: "11" # Done
+  
+  ## transition_id_problem id статуса задачи в который будет переведена задача при проблемах
+  transition_id_problem: "" # Сделать
+  
+  ## comment_success комментарий который добавится к задаче при удачном выполнении
+  comment_success: ""
+
+  ## comment_problem комментарий который добавится к задаче при неудачном выполнении
+  comment_problem: "автоматически не удалось выполнить задачу"
+
+  ## assignee_problem на кого назначить задачу при проблемах в автоматическом исполнении
+  assignee_problem: ""
+  
+  ## labels_success добавление меток в задачу при удачном её выполнении
+  labels_success: ["processed"]
+
+  ## labels_problem добавление меток в задачу при проблемах в исполнении
+  labels_problem: ["processed"]

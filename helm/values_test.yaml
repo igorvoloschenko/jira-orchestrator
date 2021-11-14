@@ -1,0 +1,97 @@
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "jira-orchestrator"
+
+jobs:
+  - name: jira-orchestrator
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 2000
+    image:
+      repository: jira-orchestrator
+      tag: dev
+      imagePullPolicy: Always
+    env: {}
+    envFrom: {}
+    schedule: "*/5 * * * *"
+    command: ["/usr/bin/python3"]
+    args:
+      - "main.py"
+      - "--config"
+      - "/app/config/config.yaml"
+    serviceAccount:
+      name: "jira-orchestrator"
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    failedJobsHistoryLimit: 1
+    successfulJobsHistoryLimit: 3
+    concurrencyPolicy: Forbid
+    restartPolicy: Never
+    nodeSelector: {}
+    tolerations: {}
+    affinity: {}
+    imagePullSecrets:
+    - name: regsecret
+    volumeMounts:
+    - mountPath: /app/config
+      name: config
+    volumes:
+      - configMap:
+          name: jira-orchestrator
+        name: config
+
+configMap:
+  name: jira-orchestrator
+  config: 
+    ## logging блок для настройки логирования
+    logging:
+      level: INFO
+      format: "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+
+    ## Количество попыток, при которых задача считается необработанной.
+    number_of_try: 3
+    ## Префикс метки по попыткам в задаче Jira 
+    try_label_prefix: "try-"
+
+    ## secret подключение secret-провайдера для получение секретов
+    ## которые можно использовать в конфигурации, пример: {{ secret.<имя_секрета> }} 
+    secret: 
+      ## указание типа провайдера
+      provider: vault
+      
+      ## данные для работы с сервисом Vault
+      vault:
+        client:
+          url: "https://vault.example/"
+        auth:
+          type: "kubernetes"
+          kubernetes:
+            role: "jira_orchestrator"
+        secret_path:
+          path: "jira_orchestrator"
+          mount_point: "infra"
+
+    ## блок для подключения к jira
+    jira:
+      url: "https://jira.example/"
+      auth:
+        type: Bearer
+        secret: "{{ secret.jira_token }}"
+      # proxy:
+
+    tasks: 
+      filePattern: "tasks/*.yaml"

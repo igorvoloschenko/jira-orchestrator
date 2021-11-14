@@ -1,0 +1,68 @@
+- name: "Доступ в Gitlab"
+
+  ## search блок в котором отбирается список задач по JQL-запросу
+  search:
+    JQL: >-
+      assignee = jira-orchestrator
+      AND project = MSDEVOPS
+      AND issuetype = 12600
+      AND status = 10083
+      AND (labels is empty or labels != processed)
+
+  ## map_variable_issue_field описание карты с переменными которые заполняются полями из задачи
+  ## в дальнейшем они будут передаваться блоку actions
+  map_variables_issue_fields:
+    type_object_id: fields.customfield_17430.id
+    id_groups: fields.customfield_22730
+    id_projects: fields.customfield_22731
+    users: fields.customfield_17330
+    role: fields.customfield_17331.value
+
+  ## actions список действий которые поочередно выполняются
+  ## при неудачном выполнении одного из действий - обработка задачи считается невыполненной 
+  actions:
+    1:
+      type: script
+
+      ## этот блок дополняет набор переменных полученных из блока map_variables_issue_fields
+      ## и использует их только в этом действии
+      variables: 
+        gitlab_url: "https://gitlab.example/"
+        gitlab_token: "{{ secret.gitlab_token }}"
+
+      # описание действия, используется для информации и при логировании
+      desc: gitlab access
+
+      data:
+        ## module_name имя модуля с функциями
+        module_name: gitlab
+
+        ## func_name имя функции которая будет вызвана с аргументами 
+        func_name: gitlab_access
+        
+      ## map_variables_json_fields этот блок дополняет набор переменных полученных из блока map_variables_issue_fields
+      ## передает следующему действию
+      ## поля он берет из ответа скрипта в формате json
+      map_variables_json_fields: {}
+
+  ## transition_id_success id статуса в который будет переведена задача при удачном выполнении всех этапов
+  transition_id_success: "71"
+  # transition_id_success: "11" # Done
+  
+  ## transition_id_problem id статуса в который будет переведена задача при проблемах
+  transition_id_problem: ""
+  
+  ## comment_success комментарий который добавится к задаче при удачном выполнении
+  comment_success: "задача обработана автоматически"
+
+  ## comment_problem комментарий который добавится к задаче при неудачном выполнении
+  comment_problem: "автоматически не удалось выполнить задачу"
+
+  ## assignee_problem на кого назначить задачу при неудачном выполнении
+  assignee_problem: "VoloshchenkoIN"
+  
+  ## labels_success добавление меток в задачу при удачном её выполнении
+  labels_success: ["processed"]
+
+  ## labels_problem добавление меток в задачу при проблемах в исполнении
+  labels_problem: ["processed"]
